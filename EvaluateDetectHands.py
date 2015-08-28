@@ -11,7 +11,7 @@ import scipy
 import glob,os
 import sys
 from types import NoneType
-
+import time
 def hist(name):
     img=cv2.imread(name)
     gray=cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -246,11 +246,12 @@ def Detect_HSV(img, lowerb, upperb):
 ##Function detect hand region by shape
 ###########################################
 '''
-def HullContour(img):
+def Shape_HullContour(img):
    #convert to binary
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     gray=cv2.GaussianBlur(gray, (3,3), 1)
-#   gray=cv2.equalizeHist(gray)
+    
+    shape_boxes=[]
     ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
     
     #noise removal
@@ -295,19 +296,30 @@ def HullContour(img):
             col,row= hull.shape[0:]
             print col, row
             if row>=1:
-                defects=cv2.convexityDefects(cnt, hull)
-                if type(defects)!= NoneType:
-                    for i in defects:
-#                         print i
-                        s,e,f,d=i[0]
-                        start=tuple(cnt[s][0])
-                        end=tuple(cnt[e][0])
-                        far=tuple(cnt[f][0])
-                        cv2.line(img, start, end, [0, 255, 0], 2)
-                        cv2.circle(img, far, 5, [0,0,255],-1)
-    cv2.imshow('demo', img)
-    cv2.waitKey(0)
-    return img 
+#                 defects=cv2.convexityDefects(cnt, hull)
+#                 if type(defects)!= NoneType:
+#                     for i in defects:
+# #                         print i
+#                         s,e,f,d=i[0]
+#                         start=tuple(cnt[s][0])
+#                         end=tuple(cnt[e][0])
+#                         far=tuple(cnt[f][0])
+#                         cv2.line(img, start, end, [0, 255, 0], 2)
+#                         cv2.circle(img, far, 5, [0,0,255],-1)
+                rect = cv2.minAreaRect(cnt)
+                box = cv2.cv.BoxPoints(rect)
+                box = np.int0(box)
+                #calculate bounding box
+                w=int(np.max([box[0][0],box[1][0],box[2][0],box[3][0]])-np.min([box[0][0],box[1][0],box[2][0],box[3][0]]))
+                h=int(np.max([box[0][1],box[1][1],box[2][1],box[3][1]])-np.min([box[0][1],box[1][1],box[2][1],box[3][1]]))
+                x_start=np.min([box[0][0],box[1][0],box[2][0],box[3][0]])
+                y_start=np.min([box[0][1],box[1][1],box[2][1],box[3][1]])
+                shape_boxes.append([int(x_start), int(y_start), w, h])
+#                 cv2.drawContours(img, [box], 0, (255,0,0),2)       
+        
+#     cv2.imshow('demo', img)
+#     cv2.waitKey(0)
+    return shape_boxes, img 
 '''
 ###########################################
 ##Foreach the image folder of hand
@@ -341,26 +353,30 @@ def detectHandFolder(in_folder):
         img=cv2.imread(file)
         print file;
         print annotation_file;
+        t0=time.time()
         #Step 2: detect bounding boxes
 #         boxes, result=HandDetectionImproved(img)
       
 #         boxes, result=Detect_YCrCb(img, np.array((0,133,77)),np.array((255,173,127)))
-#         boxes, result=Detect_HSV(img, np.array((0,48,80)),np.array((20,255,255)))
-        HullContour(img)
-#         boxes=np.asarray(boxes)
+        boxes, result=Detect_HSV(img, np.array((0,48,80)),np.array((20,255,255)))
+#         boxes, result=Shape_HullContour(img)
+        boxes=np.asarray(boxes)
+        print "elapsed times: ", time.time()-t0
+        cv2.imshow('demo', result)
+        cv2.waitKey(0)
 #         #Step 3: read information from annountation mat file
-#         annotation, annotation_fixed, img=loadMatFile(annotation_file, img);
+        annotation, annotation_fixed, img=loadMatFile(annotation_file, img);
 # # #         #Show image result
-#         drawImage(img,boxes, annotation_fixed)
-# #         #calculate Accuracy rate
-#         TP_i=NP_i=0;
-#         N_i=len(annotation_fixed);
-#         if len(boxes)>0:
-#             TP_i, NP_i, N_i=boxoverlap(boxes,annotation_fixed,0.1);
-#         TP.append(TP_i);
-#         NP.append(NP_i);
-#         N.append(N_i);
-# #      #write Accuracy Rate to file
+        drawImage(img,boxes, annotation_fixed)
+#         #calculate Accuracy rate
+        TP_i=NP_i=0;
+        N_i=len(annotation_fixed);
+        if len(boxes)>0:
+            TP_i, NP_i, N_i=boxoverlap(boxes,annotation_fixed,0.1);
+        TP.append(TP_i);
+        NP.append(NP_i);
+        N.append(N_i);
+#      #write Accuracy Rate to file
 #     writeInformationAccuracy('result_file.txt', list_name_image_file, TP, NP, N);
 '''
 #####################################################
